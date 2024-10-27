@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import './App.css';
 
@@ -8,59 +8,54 @@ function App() {
     home2: { waterLevel: 0, electricityUsage: 0, power: 0, pumpStatus: 'Unknown' }
   });
 
-  const [socket, setSocket] = useState(null);
+  const socketRef = useRef(null); // Ref to hold WebSocket instance
 
-  // Function to initialize WebSocket
-  const initializeWebSocket = () => {
-    const socket = new WebSocket('ws://localhost:3002');
-
-    socket.onopen = () => console.log('WebSocket connection established');
-
-    socket.onmessage = (event) => {
-      try {
-        const newData = JSON.parse(event.data);
-        setData(prevData => ({
-          ...prevData,
-          [`home${newData.HomeID}`]: {
-            ...prevData[`home${newData.HomeID}`],
-            waterLevel: newData.CurrentWaterLevel,
-            power: newData.Power,
-            pumpStatus: newData.PumpRunningStatus ? 'Running' : 'Stopped'
-          }
-        }));
-      } catch (err) {
-        console.error('Error parsing WebSocket message:', err);
-      }
-    };
-
-    socket.onerror = (error) => {
-      console.error('WebSocket error occurred:', error);
-    };
-
-    socket.onclose = (event) => {
-      console.log(`WebSocket closed with code: ${event.code}, reason: ${event.reason}`);
-      // Attempt to reconnect after a delay
-      setTimeout(() => {
-        console.log('Attempting to reconnect...');
-        initializeWebSocket();
-      }, 3000); // 3 seconds delay before reconnecting
-    };
-
-    setSocket(socket);
-  };
-
-  // Initialize WebSocket connection on mount
   useEffect(() => {
+    const initializeWebSocket = () => {
+      const socket = new WebSocket('ws://localhost:3002');
+      socketRef.current = socket;
+
+      socket.onopen = () => console.log('WebSocket connection established');
+
+      socket.onmessage = (event) => {
+        try {
+          const newData = JSON.parse(event.data);
+          setData(prevData => ({
+            ...prevData,
+            [`home${newData.HomeID}`]: {
+              ...prevData[`home${newData.HomeID}`],
+              waterLevel: newData.CurrentWaterLevel,
+              power: newData.Power,
+              pumpStatus: newData.PumpRunningStatus ? 'Running' : 'Stopped'
+            }
+          }));
+        } catch (err) {
+          console.error('Error parsing WebSocket message:', err);
+        }
+      };
+
+      socket.onerror = (error) => {
+        console.error('WebSocket error occurred:', error);
+      };
+
+      socket.onclose = (event) => {
+        console.log(`WebSocket closed with code: ${event.code}, reason: ${event.reason}`);
+        setTimeout(() => {
+          console.log('Attempting to reconnect...');
+          initializeWebSocket();
+        }, 3000);
+      };
+    };
+
     initializeWebSocket();
 
     return () => {
-      if (socket) {
-        socket.close();
+      if (socketRef.current) {
+        socketRef.current.close();
       }
     };
-  }, []);
+  }, []); // Empty dependency array to only run once
 
-  // Fetch electricity usage from MongoDB via HTTP request
   useEffect(() => {
     const fetchElectricityUsage = () => {
       axios.get('http://localhost:3001/api/electricityUsage')
