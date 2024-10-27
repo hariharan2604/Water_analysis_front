@@ -8,17 +8,84 @@ function App() {
     home2: { waterLevel: 0, electricityUsage: 0, power: 0, pumpStatus: 'Unknown' }
   });
 
-  // Fetch data from the backend every second
+  const [socket, setSocket] = useState(null);
+
+  // Function to initialize WebSocket
+  const initializeWebSocket = () => {
+    const socket = new WebSocket('ws://localhost:3002');
+
+    socket.onopen = () => console.log('WebSocket connection established');
+
+    socket.onmessage = (event) => {
+      try {
+        const newData = JSON.parse(event.data);
+        setData(prevData => ({
+          ...prevData,
+          [`home${newData.HomeID}`]: {
+            ...prevData[`home${newData.HomeID}`],
+            waterLevel: newData.CurrentWaterLevel,
+            power: newData.Power,
+            pumpStatus: newData.PumpRunningStatus ? 'Running' : 'Stopped'
+          }
+        }));
+      } catch (err) {
+        console.error('Error parsing WebSocket message:', err);
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.error('WebSocket error occurred:', error);
+    };
+
+    socket.onclose = (event) => {
+      console.log(`WebSocket closed with code: ${event.code}, reason: ${event.reason}`);
+      // Attempt to reconnect after a delay
+      setTimeout(() => {
+        console.log('Attempting to reconnect...');
+        initializeWebSocket();
+      }, 3000); // 3 seconds delay before reconnecting
+    };
+
+    setSocket(socket);
+  };
+
+  // Initialize WebSocket connection on mount
   useEffect(() => {
-    const interval = setInterval(() => {
-      axios.get('http://localhost:3001/api/data')
+    initializeWebSocket();
+
+    return () => {
+      if (socket) {
+        socket.close();
+      }
+    };
+  }, []);
+
+  // Fetch electricity usage from MongoDB via HTTP request
+  useEffect(() => {
+    const fetchElectricityUsage = () => {
+      axios.get('http://localhost:3001/api/electricityUsage')
         .then((response) => {
-          setData(response.data);
+          const { home1Usage, home2Usage } = response.data;
+          setData(prevData => ({
+            ...prevData,
+            home1: {
+              ...prevData.home1,
+              electricityUsage: home1Usage
+            },
+            home2: {
+              ...prevData.home2,
+              electricityUsage: home2Usage
+            }
+          }));
         })
         .catch((error) => {
-          console.error('Error fetching data:', error);
+          console.error('Error fetching electricity usage:', error);
         });
-    }, 1000);
+    };
+
+    fetchElectricityUsage(); // Initial fetch on mount
+
+    const interval = setInterval(fetchElectricityUsage, 60000); // Update every minute
 
     return () => clearInterval(interval); // Cleanup interval on unmount
   }, []);

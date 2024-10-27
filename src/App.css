@@ -36,7 +36,8 @@ h2 {
   position: absolute;
   bottom: 0;
   width: 100%;
-  background-color: #00f;
+  /* background-color: #08C2FF; */
+    background-color: lightblue;
   transition: height 0.5s ease;
 }
 
