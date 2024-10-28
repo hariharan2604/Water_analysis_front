@@ -24,22 +24,21 @@ h2 {
 }
 
 .water-tank {
-  width: 100px;
+  width: 50px;
   height: 200px;
-  border: 2px solid #000;
+  border: 2px solid #007BFF;
   position: relative;
-  background-color: #e0e0e0;
-  margin: 0 auto;
+  background-color: #E5E5E5;
 }
 
 .water {
+  width: 100%;
   position: absolute;
   bottom: 0;
-  width: 100%;
-  /* background-color: #08C2FF; */
-    background-color: lightblue;
+  background-color: #007BFF;
   transition: height 0.5s ease;
 }
+
 
 p {
   margin-top: 15px;

@@ -11,11 +11,18 @@ function App() {
   const socketRef = useRef(null); // Ref to hold WebSocket instance
 
   useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 5;
+
     const initializeWebSocket = () => {
+      if (retryCount >= maxRetries) return console.log("Max retries reached for WebSocket");
       const socket = new WebSocket('ws://localhost:3002');
       socketRef.current = socket;
 
-      socket.onopen = () => console.log('WebSocket connection established');
+      socket.onopen = () => {
+        console.log('WebSocket connection established');
+        retryCount = 0;  // Reset retry count on successful connection
+      };
 
       socket.onmessage = (event) => {
         try {
@@ -40,6 +47,7 @@ function App() {
 
       socket.onclose = (event) => {
         console.log(`WebSocket closed with code: ${event.code}, reason: ${event.reason}`);
+        retryCount++;
         setTimeout(() => {
           console.log('Attempting to reconnect...');
           initializeWebSocket();
@@ -98,7 +106,7 @@ function App() {
               <div className="water" style={{ height: `${data.home1.waterLevel}%` }}></div>
             </div>
           </div>
-          <p>Electricity Usage (Today): {data.home1.electricityUsage} W</p>
+          <p>Electricity Usage (This Month): {data.home1.electricityUsage} W</p>
           <p>Instant Power: {data.home1.power} W</p>
           <p>Pump Status: {data.home1.pumpStatus}</p>
         </div>
@@ -111,7 +119,7 @@ function App() {
               <div className="water" style={{ height: `${data.home2.waterLevel}%` }}></div>
             </div>
           </div>
-          <p>Electricity Usage (Today): {data.home2.electricityUsage} W</p>
+          <p>Electricity Usage (This Month): {data.home2.electricityUsage} W</p>
           <p>Instant Power: {data.home2.power} W</p>
           <p>Pump Status: {data.home2.pumpStatus}</p>
         </div>
