@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import './App.css';
+import DateTime from './DateTime'; // Import DateTime component
 
 function App() {
   const [data, setData] = useState({
@@ -8,7 +9,7 @@ function App() {
     home2: { waterLevel: 0, electricityUsage: 0, power: 0, pumpStatus: 'Unknown' }
   });
 
-  const socketRef = useRef(null); // Ref to hold WebSocket instance
+  const socketRef = useRef(null);
 
   useEffect(() => {
     let retryCount = 0;
@@ -21,7 +22,7 @@ function App() {
 
       socket.onopen = () => {
         console.log('WebSocket connection established');
-        retryCount = 0;  // Reset retry count on successful connection
+        retryCount = 0;
       };
 
       socket.onmessage = (event) => {
@@ -62,7 +63,7 @@ function App() {
         socketRef.current.close();
       }
     };
-  }, []); // Empty dependency array to only run once
+  }, []);
 
   useEffect(() => {
     const fetchElectricityUsage = () => {
@@ -86,43 +87,39 @@ function App() {
         });
     };
 
-    fetchElectricityUsage(); // Initial fetch on mount
+    fetchElectricityUsage();
 
-    const interval = setInterval(fetchElectricityUsage, 60000); // Update every minute
+    const interval = setInterval(fetchElectricityUsage, 60000);
 
-    return () => clearInterval(interval); // Cleanup interval on unmount
+    return () => clearInterval(interval);
   }, []);
 
   return (
     <div className="App">
+      <DateTime /> {/* Display the date and time */}
       <h1>Water and Power Monitoring</h1>
 
       <div className="home-container">
-        <div className="home">
-          <h2>Home 1</h2>
-          <div className="water-level">
-            <h3>Water Level: {data.home1.waterLevel}%</h3>
-            <div className="water-tank">
-              <div className="water" style={{ height: `${data.home1.waterLevel}%` }}></div>
+        {['home1', 'home2'].map(home => (
+          <div className="home" key={home}>
+            <h2>{home === 'home1' ? 'Home 1' : 'Home 2'}</h2>
+            <div className="water-level">
+              <h3>Water Level: {data[home].waterLevel}%</h3>
+              <div className="water-tank">
+                <div className="water" style={{ height: `${data[home].waterLevel}%` }}></div>
+              </div>
             </div>
+            <p>Electricity Usage (This Month): {data[home].electricityUsage} W</p>
+            <p>Instant Power: {data[home].power} W</p>
+            <p>
+              <span
+                className={`status-dot ${data[home].pumpStatus === 'Running' ? 'status-running' : 'status-stopped'
+                  }`}
+              ></span>
+              Pump Status: {data[home].pumpStatus}
+            </p>
           </div>
-          <p>Electricity Usage (This Month): {data.home1.electricityUsage} W</p>
-          <p>Instant Power: {data.home1.power} W</p>
-          <p>Pump Status: {data.home1.pumpStatus}</p>
-        </div>
-
-        <div className="home">
-          <h2>Home 2</h2>
-          <div className="water-level">
-            <h3>Water Level: {data.home2.waterLevel}%</h3>
-            <div className="water-tank">
-              <div className="water" style={{ height: `${data.home2.waterLevel}%` }}></div>
-            </div>
-          </div>
-          <p>Electricity Usage (This Month): {data.home2.electricityUsage} W</p>
-          <p>Instant Power: {data.home2.power} W</p>
-          <p>Pump Status: {data.home2.pumpStatus}</p>
-        </div>
+        ))}
       </div>
     </div>
   );
